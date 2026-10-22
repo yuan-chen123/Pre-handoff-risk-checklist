@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pre-handoff risk checklist · v0.1</title>
+<style>
+:root{
+  --ink:#1A0826; --muted:#6B616E; --brand:#6542BE; --brand-tint:#EDE6FF;
+  --bg:#F4F4F4; --card:#fff; --line:#E2E1DF; --line-strong:#C6C3C5;
+  --blocker:#1A0826; --mitigate:#FAEC7D; --accept:#DCF995; --danger:#B3261E;
+  --radius:16px; --font:"Sharp Grotesk",-apple-system,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--font)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.wrap{max-width:1360px;margin:0 auto;padding:32px 40px 80px}
+header{display:flex;justify-content:space-between;gap:32px;flex-wrap:wrap}
+h1{font-size:30px;margin:0;display:inline}
+.ver{background:var(--brand);color:#fff;border-radius:13px;padding:3px 12px;font-size:12px;margin-left:12px;vertical-align:middle}
+.lede{color:var(--muted);max-width:640px;margin:10px 0 0}
+.meta{display:grid;grid-template-columns:repeat(3,170px);gap:10px 20px}
+.meta label{display:block;font-size:11px;color:var(--muted)}
+.meta input{width:100%;border:0;border-bottom:1px solid var(--line-strong);background:transparent;padding:4px 0}
+.status{position:sticky;top:0;z-index:5;margin:20px -40px 0;padding:12px 40px;background:rgba(244,244,244,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:12px;padding:3px 12px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.blocker{background:var(--blocker);color:#fff}.pill.mitigate{background:var(--mitigate)}.pill.accept{background:var(--accept)}
+.verdict{font-weight:600}
+.verdict.ok{color:#2c6b00}.verdict.no{color:var(--danger)}
+.spacer{flex:1}
+.btn{border:1px solid var(--line-strong);background:#fff;border-radius:20px;padding:6px 14px;cursor:pointer}
+.btn:hover{border-color:var(--brand)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.triage{background:var(--brand-tint);border-radius:var(--radius);padding:20px;margin-top:20px}
+.triage h2{font-size:16px;margin:0 0 14px}.triage h2 span{font-weight:400;color:var(--muted);font-size:12px;margin-left:10px}
+.tgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.tcard{background:#fff;border-radius:12px;padding:14px;box-shadow:0 4px 2px rgba(0,0,0,.04);display:flex;flex-direction:column;cursor:pointer;border:2px solid transparent;position:relative}
+.tcard:has(input:checked){border-color:var(--brand)}
+.tcard .id{color:var(--brand);font-weight:600;font-size:12px}
+.tcard p{margin:6px 0 10px;flex:1}
+.tcard small{color:var(--muted);font-weight:500}
+.tcard input{position:absolute;top:12px;right:12px;width:16px;height:16px;accent-color:var(--brand)}
+.modules{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:16px;align-items:start}
+.mod{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:0 4px 2px rgba(0,0,0,.04)}
+.mod.locked{background:transparent;border:2px dashed var(--line-strong);box-shadow:none}
+.mod.locked .body{display:none}
+.mod header{gap:10px;flex-wrap:nowrap;align-items:center}
+.mod .badge{width:28px;height:28px;border-radius:8px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:600}
+.mod.locked .badge{background:var(--line-strong)}
+.mod h3{margin:0;font-size:18px}
+.mod .opened{font-size:11px;color:var(--muted);margin:8px 0 6px;font-weight:500}
+.item{border-top:1px solid var(--line);padding:10px 0}
+.item p{margin:0 0 8px;font-size:13px}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:16px;overflow:hidden}
+.seg label{cursor:pointer;font-size:12px;padding:3px 12px;border-right:1px solid var(--line-strong);user-select:none}
+.seg label:last-child{border:0}
+.seg input{position:absolute;opacity:0}
+.seg label:has(input:checked){background:var(--ink);color:#fff}
+.seg label:has(input[value=flag]:checked){background:var(--brand)}
+.seg label:has(input:focus-visible){outline:3px solid var(--brand);outline-offset:-3px}
+.flagbox{margin-top:8px;background:#FAF8FF;border:1px solid #D9CCFA;border-radius:10px;padding:10px;display:grid;gap:8px}
+.flagbox label{font-size:11px;color:var(--muted);display:block}
+.flagbox input[type=text],.flagbox input[type=date],.flagbox select,.flagbox textarea,.mod .evid{width:100%;border:1px solid var(--line-strong);border-radius:6px;padding:5px 8px;background:#fff}
+.flagbox textarea{min-height:52px;resize:vertical}
+.err{color:var(--danger);font-size:11px;margin-top:2px}
+.hint{font-size:11px;color:var(--muted)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.evidwrap{margin-top:12px}
+.evidwrap label{font-size:11px;color:var(--muted)}
+.bottom{display:grid;grid-template-columns:1fr 1fr;background:#fff;border-radius:var(--radius);margin-top:16px;padding:20px;gap:0;box-shadow:0 4px 2px rgba(0,0,0,.04)}
+.bottom h2{font-size:16px;margin:0 0 12px}
+.sev{display:grid;grid-template-columns:90px 1fr auto;gap:10px;align-items:center;margin-bottom:10px;font-size:12px}
+.sev em{font-style:normal;color:var(--brand);font-weight:500}
+.sign{padding-left:30px;border-left:1px solid var(--line)}
+.sign label.chk{display:inline-flex;align-items:center;gap:8px;margin:0 22px 10px 0;cursor:pointer}
+.sign input[type=checkbox]{width:16px;height:16px;accent-color:var(--brand)}
+.sign .cond{opacity:.55}.sign .cond.req{opacity:1;font-weight:600}
+.sign .esc{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px;color:var(--muted)}
+.sign .esc input{flex:1;border:0;border-bottom:1px solid var(--line-strong);background:transparent;padding:3px 0}
+.why{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:16px}
+.why div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:12px}
+.why b{display:block;color:var(--brand);margin-bottom:4px}
+dialog{border:0;border-radius:var(--radius);padding:24px;max-width:720px;width:92%}
+dialog::backdrop{background:rgba(26,8,38,.5)}
+dialog pre{white-space:pre-wrap;background:var(--bg);padding:14px;border-radius:8px;max-height:50vh;overflow:auto;font-size:12px}
+.demo{position:fixed;right:16px;bottom:16px;z-index:9}
+.demo summary{list-style:none;background:var(--ink);color:#fff;border-radius:20px;padding:6px 14px;cursor:pointer;font-size:12px}
+.demo div{background:#fff;border:1px solid var(--line-strong);border-radius:12px;padding:10px;margin-bottom:8px;display:grid;gap:6px}
+.sr{position:absolute;left:-9999px}
+@media(max-width:1100px){.tgrid{grid-template-columns:repeat(3,1fr)}.modules{grid-template-columns:repeat(2,1fr)}.why{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.wrap{padding:20px 16px}.status{margin:16px -16px 0;padding:10px 16px}.tgrid,.modules,.bottom{grid-template-columns:1fr}.sign{padding:20px 0 0;border:0}.meta{grid-template-columns:1fr 1fr}}
+@media(prefers-reduced-motion:no-preference){.mod{transition:opacity .2s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Pre-handoff risk checklist</h1><span class="ver">v0.1 · pilot draft</span>
+    <p class="lede">Complete triage for every project. Any flagged item opens its module. Flagged items need a note or link, and a risk can't be accepted without a named owner.</p>
+  </div>
+  <div class="meta" id="meta"></div>
+</header>
+
+<div class="status" role="status" aria-live="polite" id="status"></div>
+
+<section class="triage" aria-labelledby="t-h">
+  <h2 id="t-h">Step 0 · Triage<span>Answer for every project. A flag opens the matching module(s).</span></h2>
+  <div class="tgrid" id="triage"></div>
+</section>
+
+<section class="modules" id="modules" aria-label="Modules"></section>
+
+<section class="bottom" aria-label="Severity and sign-off">
+  <div>
+    <h2>Severity</h2>
+    <div class="sev"><span class="pill blocker">Blocker</span><span>Harm, legal exposure or a11y failure on a core flow</span><em>Resolve before handoff</em></div>
+    <div class="sev"><span class="pill mitigate">Mitigate</span><span>Real risk with a feasible fix</span><em>Ticket with owner and date</em></div>
+    <div class="sev"><span class="pill accept">Accept</span><span>Low risk, or not feasible now</span><em>Named owner and review date</em></div>
+  </div>
+  <div class="sign">
+    <h2>Sign-off</h2>
+    <div id="signoffs"></div>
+    <div class="esc"><span>Escalation: if a blocker can't be cleared before handoff, escalate to</span><input id="escalate" aria-label="Escalation contact"></div>
+    <p class="err" id="signerr"></p>
+  </div>
+</section>
+
+<section class="why" aria-label="Why teams benefit">
+  <div><b>PM</b>Blockers vs. fast-follows get decided here, not at launch.</div>
+  <div><b>Engineering</b>Accessibility and data items double as spec requirements. Less rework.</div>
+  <div><b>Compliance/Legal</b>Triage flags show early which projects need review.</div>
+  <div><b>CX/Support</b>Harm signals feed contact-driver reporting.</div>
+  <div><b>Business</b>A trust and regulatory hedge: faster handoffs, fewer post-launch fixes.</div>
+</section>
+</div>
+
+<dialog id="summary" aria-labelledby="sum-h">
+  <h2 id="sum-h" style="margin-top:0">Handoff summary</h2>
+  <pre id="sumtext"></pre>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+    <button class="btn" id="copy">Copy</button>
+    <button class="btn primary" id="close">Close</button>
+  </div>
+</dialog>
+
+<details class="demo"><summary>Demo controls</summary>
+  <div>
+    <button class="btn" id="d-fill">Fill sample project</button>
+    <button class="btn" id="d-clear">Reset all</button>
+  </div>
+</details>
+
+<script>
+const TRIAGE=[
+ {id:"T1",q:"Changes how a customer pays, repays, borrows or sees what they owe (limits, fees, due dates, autopay)?",opens:["C","D"]},
+ {id:"T2",q:"Collects, shows, infers or shares new personal or financial data (incl. notifications, lock screen)?",opens:["B"]},
+ {id:"T3",q:"Adds urgency, rewards, streaks, offers or defaults that influence spending?",opens:["C","D"]},
+ {id:"T4",q:"Adds a new pattern, component or content type?",opens:["A"]},
+ {id:"T5",q:"Who is the most vulnerable plausible user, and what happens to them if this goes wrong?",opens:["C"]},
+ {id:"T6",q:"Can a customer undo or recover from a mistake?",opens:["C"],invert:true}
+];
+const MODS={
+ A:{name:"Accessibility",items:[
+  "Works with screen reader, switch/keyboard, 200% text and reduced motion (specified, not assumed)",
+  "Meaning never relies on color alone (overdue, declined, progress); WCAG 2.2 AA contrast met",
+  "Focus order, touch targets and error recovery documented in the spec",
+  "OTP, biometric and timed steps have accessible alternatives",
+  "Payment-critical copy is plain language and reads clearly aloud"]},
+ B:{name:"Privacy and data",items:[
+  "Minimum data collected; purpose stated at the point of collection",
+  "Consent is specific, optional where it should be, and withdrawable in-app",
+  "No sensitive amounts or status in push, email or lock-screen previews",
+  "Analytics, personalization and third-party SDKs reviewed for what they receive",
+  "Inferred signals (\"stretched\", \"likely to miss payment\") avoided or reviewed with Privacy/Legal"]},
+ C:{name:"Customer harm",items:[
+  "Vulnerable groups named (young adults, hardship, low financial literacy, coerced or shared-account situations)",
+  "Urgency, rewards, streaks and nudges don't push over-commitment or repeat spend",
+  "Unhappy paths designed: failed payment, missed due date, decline, dispute, fraud, outage",
+  "Help reachable at the moment of need (hardship options, support, pause/undo)",
+  "Harm signals defined for post-launch (late fees, support contacts, confusion drop-off)",
+  "Screenshot test: comfortable with this in a regulator review or news story?"]},
+ D:{name:"Financial-decision risk",items:[
+  "Total obligation (amount, dates, fees, missed-payment consequences) visible before commitment",
+  "Customers can restate what they agreed to (comprehension test run or planned)",
+  "Defaults, order and emphasis neutral; no dark patterns (pre-ticked boxes, asymmetric buttons, confirm-shaming)",
+  "Limit, eligibility and repayment changes communicated clearly, no surprises",
+  "Compliance reviewed claims and disclosures for each market"]}
+};
+const META=["Project","Designer","PM","Eng lead","Date","Handoff target"];
+const KEY="zip-risk-checklist-v0.1";
+let S=load();
+function blank(){return{meta:{},tri:{},items:{},sign:{},esc:""}}
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||blank()}catch{return blank()}}
+function save(){localStorage.setItem(KEY,JSON.stringify(S))}
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const opened=()=>{const o={};TRIAGE.forEach(t=>{if(S.tri[t.id]) t.opens.forEach(m=>(o[m]??=[]).push(t.id))});return o};
+const itemKey=(m,i)=>m+i;
+
+function validate(it){ // returns array of errors for a flagged item
+  const e=[];
+  if(!(it.note||"").trim()) e.push("Add a note or link.");
+  if(!it.sev) e.push("Choose a severity.");
+  if(it.sev==="mitigate"){ if(!(it.owner||"").trim()) e.push("Ticket needs an owner."); if(!it.date) e.push("Ticket needs a date."); }
+  if(it.sev==="accept"){ if(!(it.owner||"").trim()) e.push("A risk can't be accepted without a named owner."); if(!it.date) e.push("Add a review date."); }
+  return e;
+}
+function stats(){
+  const op=opened(), r={blocker:0,blockerOpen:0,mitigate:0,accept:0,invalid:0,unanswered:0,flags:{A:0,B:0,C:0,D:0}};
+  Object.keys(op).forEach(m=>MODS[m].items.forEach((_,i)=>{
+    const it=S.items[itemKey(m,i)]||{};
+    if(!it.res) r.unanswered++;
+    if(it.res==="flag"){
+      r.flags[m]++;
+      if(validate(it).length) r.invalid++;
+      if(it.sev==="blocker"){r.blocker++; if(!it.resolved) r.blockerOpen++}
+      if(it.sev==="mitigate") r.mitigate++;
+      if(it.sev==="accept") r.accept++;
+    }
+  }));
+  return r;
+}
+function needs(r){return{legal:r.flags.B+r.flags.D>0, cx:r.flags.C>0}}
+
+function renderMeta(){
+  $("#meta").innerHTML=META.map(m=>`<div><label for="m-${m}">${m}</label><input id="m-${m}" type="${m==="Date"?"date":"text"}" value="${esc(S.meta[m])}"></div>`).join("");
+  $("#meta").oninput=e=>{S.meta[e.target.id.slice(2)]=e.target.value;save()};
+}
+function renderTriage(){
+  $("#triage").innerHTML=TRIAGE.map(t=>`
+   <label class="tcard"><input type="checkbox" data-t="${t.id}" ${S.tri[t.id]?"checked":""} aria-label="${t.id}: flag">
+    <span class="id">${t.id}</span><p>${esc(t.q)}</p><small>Opens ${t.opens.join(" + ")}</small></label>`).join("");
+  $("#triage").onchange=e=>{S.tri[e.target.dataset.t]=e.target.checked;save();renderModules();renderStatus();renderSign()};
+}
+function renderModules(){
+  const op=opened(), focus=document.activeElement?.id;
+  $("#modules").innerHTML=Object.entries(MODS).map(([k,m])=>{
+    const by=op[k]; const locked=!by;
+    return `<article class="mod ${locked?"locked":""}" aria-labelledby="mh-${k}">
+      <header><span class="badge" aria-hidden="true">${k}</span><h3 id="mh-${k}">${m.name}</h3></header>
+      <div class="opened">${locked?"Not opened by triage":"Opened by "+by.join(", ")}</div>
+      <div class="body">${m.items.map((txt,i)=>itemHTML(k,i,txt)).join("")}
+       <div class="evidwrap"><label for="ev-${k}">Evidence / link / owner</label>
+       <input class="evid" id="ev-${k}" value="${esc(S.items["ev"+k])}"></div></div></article>`}).join("");
+  if(focus) document.getElementById(focus)?.focus();
+}
+function itemHTML(k,i,txt){
+  const key=itemKey(k,i), it=S.items[key]||{}, n=`r-${key}`;
+  const radio=(v,l)=>`<label><input type="radio" name="${n}" value="${v}" data-k="${key}" data-f="res" ${it.res===v?"checked":""}>${l}</label>`;
+  let flag="";
+  if(it.res==="flag"){
+    const errs=validate(it);
+    flag=`<div class="flagbox">
+     <div><label for="n-${key}">Note or link <span aria-hidden="true">*</span></label><textarea id="n-${key}" data-k="${key}" data-f="note">${esc(it.note)}</textarea></div>
+     <div><label for="s-${key}">Severity <span aria-hidden="true">*</span></label>
+      <select id="s-${key}" data-k="${key}" data-f="sev"><option value="">Choose…</option>
+      ${["blocker","mitigate","accept"].map(s=>`<option value="${s}" ${it.sev===s?"selected":""}>${s[0].toUpperCase()+s.slice(1)}</option>`).join("")}</select></div>
+     ${it.sev==="blocker"?`<label class="chk" style="display:flex;gap:8px;align-items:center;color:var(--ink);font-size:12px"><input type="checkbox" data-k="${key}" data-f="resolved" ${it.resolved?"checked":""}> Resolved before handoff</label>`:""}
+     ${it.sev==="mitigate"||it.sev==="accept"?`<div class="row2">
+       <div><label for="o-${key}">${it.sev==="accept"?"Risk owner":"Ticket owner"} *</label><input type="text" id="o-${key}" data-k="${key}" data-f="owner" value="${esc(it.owner)}"></div>
+       <div><label for="d-${key}">${it.sev==="accept"?"Review date":"Due date"} *</label><input type="date" id="d-${key}" data-k="${key}" data-f="date" value="${esc(it.date)}"></div></div>`:""}
+     ${errs.length?`<div class="err" role="alert">${errs.join(" ")}</div>`:`<div class="hint">✓ Complete</div>`}
+    </div>`;
+  }
+  return `<div class="item"><p id="p-${key}">${esc(txt)}</p>
+    <div class="seg" role="radiogroup" aria-labelledby="p-${key}">${radio("met","Met")}${radio("flag","Flag")}${radio("na","N/A")}</div>${flag}</div>`;
+}
+function renderStatus(){
+  const r=stats(), n=needs(r);
+  const blocked=r.blockerOpen>0, incomplete=r.invalid>0||r.unanswered>0;
+  const verdict=blocked?`<span class="verdict no">Not ready · ${r.blockerOpen} open blocker${r.blockerOpen>1?"s":""}</span>`
+    :incomplete?`<span class="verdict no">Not ready · ${r.unanswered?r.unanswered+" unanswered":""}${r.unanswered&&r.invalid?", ":""}${r.invalid?r.invalid+" flag"+(r.invalid>1?"s":"")+" missing details":""}</span>`
+    :`<span class="verdict ok">Ready for sign-off</span>`;
+  $("#status").innerHTML=`${verdict}<span class="pill blocker">${r.blocker} Blocker</span><span class="pill mitigate">${r.mitigate} Mitigate</span><span class="pill accept">${r.accept} Accept</span><span class="spacer"></span><button class="btn primary" id="gen">Handoff summary</button>`;
+  $("#gen").onclick=showSummary;
+}
+const SIGNS=[["Design","design"],["PM","pm"],["Eng","eng"],["Compliance/Legal (if flagged)","legal"],["CX (if flagged)","cx"]];
+function renderSign(){
+  const r=stats(), n=needs(r);
+  $("#signoffs").innerHTML=SIGNS.map(([l,k])=>{
+    const cond=k==="legal"||k==="cx", req=cond&&n[k];
+    return `<label class="chk ${cond?"cond":""} ${req?"req":""}"><input type="checkbox" data-sign="${k}" ${S.sign[k]?"checked":""}>${l}${req?" · required":""}</label>`}).join("");
+  $("#escalate").value=S.esc||"";
+}
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.dataset.sign){
+    const r=stats();
+    if(t.checked&&r.blockerOpen){t.checked=false;$("#signerr").textContent=`Can't sign off with ${r.blockerOpen} unresolved blocker${r.blockerOpen>1?"s":""}. Resolve them or name an escalation contact.`;return}
+    $("#signerr").textContent="";S.sign[t.dataset.sign]=t.checked;save();return}
+  if(t.dataset.k) update(t);
+});
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.id==="escalate"){S.esc=t.value;save()}
+  else if(t.classList.contains("evid")){S.items["ev"+t.id.slice(3)]=t.value;save()}
+  else if(t.dataset.k&&(t.tagName==="TEXTAREA"||t.type==="text")) update(t,true);
+});
+function update(t,soft){
+  const k=t.dataset.k, f=t.dataset.f; const it=(S.items[k]??={});
+  it[f]=t.type==="checkbox"?t.checked:t.value; save();
+  renderStatus(); renderSign();
+  if(soft){ // typing: refresh validation message only, keep focus
+    const box=t.closest(".flagbox"); if(box){const errs=validate(it);const old=box.querySelector(".err,.hint");
+      if(old) old.outerHTML=errs.length?`<div class="err" role="alert">${errs.join(" ")}</div>`:`<div class="hint">✓ Complete</div>`}
+  } else renderModules();
+}
+function summaryText(){
+  const r=stats(), op=opened(), L=[];
+  L.push(`PRE-HANDOFF RISK CHECKLIST v0.1`);
+  META.forEach(m=>L.push(`${m}: ${S.meta[m]||"—"}`));
+  L.push("",`Triage flags: ${TRIAGE.filter(t=>S.tri[t.id]).map(t=>t.id).join(", ")||"none"}`,`Modules opened: ${Object.keys(op).join(", ")||"none"}`,
+    `Blocker ${r.blocker} (${r.blockerOpen} unresolved) · Mitigate ${r.mitigate} · Accept ${r.accept}`,"");
+  Object.keys(op).forEach(m=>MODS[m].items.forEach((txt,i)=>{
+    const it=S.items[itemKey(m,i)]; if(it?.res!=="flag")return;
+    L.push(`[${m}] ${txt}`,`   ${(it.sev||"unrated").toUpperCase()}${it.sev==="blocker"?(it.resolved?" (resolved)":" (OPEN)"):""} — ${it.note||"no note"}${it.owner?` — owner ${it.owner}`:""}${it.date?` — ${it.date}`:""}`)}));
+  L.push("","Sign-off: "+SIGNS.filter(([,k])=>S.sign[k]).map(([l])=>l.replace(/ \(.*/,"")).join(", ")||"none");
+  if(S.esc)L.push("Escalation: "+S.esc);
+  return L.join("\n");
+}
+function showSummary(){$("#sumtext").textContent=summaryText();$("#summary").showModal()}
+$("#close").onclick=()=>$("#summary").close();
+$("#copy").onclick=e=>{navigator.clipboard?.writeText(summaryText());e.target.textContent="Copied"; setTimeout(()=>e.target.textContent="Copy",1500)};
+$("#d-clear").onclick=()=>{S=blank();save();init()};
+$("#d-fill").onclick=()=>{
+  S=blank();S.meta={Project:"Autopay reminders",Designer:"Yuan Chen",PM:"Sample PM","Eng lead":"Sample Eng",Date:"2026-10-22","Handoff target":"Sprint 42"};
+  S.tri={T1:true,T2:true,T3:true};
+  S.items={C0:{res:"flag",note:"Teens in shared-account households not covered",sev:"mitigate",owner:"Sam",date:"2026-11-05"},
+           C1:{res:"flag",note:"Streak banner pushes repeat spend",sev:"blocker"},
+           B2:{res:"flag",note:"Amount appears on lock screen preview",sev:"accept"}};
+  save();init()};
+function init(){renderMeta();renderTriage();renderModules();renderStatus();renderSign()}
+init();
+</script>
+</body>
+</html>

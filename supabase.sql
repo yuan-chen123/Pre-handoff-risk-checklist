@@ -1,7 +1,7 @@
 -- Shared backend for the risk checklist. Run once in the Supabase SQL editor.
 -- Tables are locked down (RLS on, no policies): the browser can only call the functions
 -- below, and every function requires the shared password.
--- CHANGE 'password' below. It is only a shared secret: anyone who learns it has full access.
+-- CHANGE 'zipco2026' below. It is only a shared secret: anyone who learns it has full access.
 create table if not exists projects(
   id uuid primary key default gen_random_uuid(), name text not null,
   state jsonb not null default '{}', updated_by text, updated_at timestamptz not null default now());
@@ -12,10 +12,10 @@ alter table projects enable row level security;
 alter table comments enable row level security;
 
 create or replace function _ok(p text) returns void language plpgsql as $$
-begin if p is distinct from 'password' then raise exception 'unauthorized'; end if; end $$;
+begin if p is distinct from 'zipco2026' then raise exception 'unauthorized'; end if; end $$;
 
 create or replace function check_pass(p_pass text) returns boolean language plpgsql security definer as $$
-begin return p_pass is not distinct from 'password'; end $$;
+begin return p_pass is not distinct from 'zipco2026'; end $$;
 
 create or replace function list_projects(p_pass text) returns setof projects language plpgsql security definer as $$
 begin perform _ok(p_pass); return query select id,name,'{}'::jsonb,updated_by,updated_at from projects order by updated_at desc; end $$;

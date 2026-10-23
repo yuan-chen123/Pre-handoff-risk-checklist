@@ -270,7 +270,7 @@ const B=REMOTE?{
   remove:id=>rpc("delete_project",{p_id:id}),
   duplicate:(id,name,user)=>rpc("duplicate_project",{p_id:id,p_name:name,p_user:user})
 }:{
-  check:async p=>p==="password",
+  check:async p=>p==="zipco2026",
   list:async()=>Object.values(LDB.get().projects).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)),
   create:async(name,user)=>{const d=LDB.get(),id=uid(),now=new Date().toISOString();d.projects[id]={id,name,state:{"meta.Project":name},updated_by:user,updated_at:now};LDB.set(d);return id},
   get:async id=>LDB.get().projects[id]||null,

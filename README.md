@@ -16,3 +16,4 @@ Assumptions (not in the source design — adjust freely):
 - **Local mode** (default, `config.js` empty): everything is stored in this browser only — fine for demos, not shared.
 - **Shared mode:** create a Supabase project, run `supabase.sql`, paste URL + anon key into `config.js`. All access goes through password-checked SQL functions; change `'password'` in the SQL.
 - **Security caveat:** the password is a shared secret checked in the page and the database. `password` is trivially guessable, and the site is a public GitHub Pages URL. Do not put confidential project data behind it until it's behind Zip SSO or at least a strong password.
+- Project CRUD: create (name required), open/edit, rename (list, top bar, or the Project field in the checklist), duplicate, delete. Delete, and "Clear checklist", use a confirmation modal; Cancel is focused by default.

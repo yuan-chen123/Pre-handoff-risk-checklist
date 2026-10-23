@@ -40,3 +40,17 @@ begin perform _ok(p_pass);
   insert into comments(project_id,item_key,author,body) values(p_id,left(p_key,20),left(p_user,100),left(p_body,4000)); end $$;
 
 grant execute on function check_pass,list_projects,create_project,get_project,patch_project,list_comments,add_comment to anon;
+
+create or replace function rename_project(p_pass text,p_id uuid,p_name text,p_user text) returns void language plpgsql security definer as $$
+begin perform _ok(p_pass);
+  update projects set name=left(p_name,200),state=state||jsonb_build_object('meta.Project',left(p_name,200)),updated_by=left(p_user,100),updated_at=now() where id=p_id; end $$;
+
+create or replace function delete_project(p_pass text,p_id uuid) returns void language plpgsql security definer as $$
+begin perform _ok(p_pass); delete from projects where id=p_id; end $$;
+
+create or replace function duplicate_project(p_pass text,p_id uuid,p_name text,p_user text) returns uuid language plpgsql security definer as $$
+declare v uuid; begin perform _ok(p_pass);
+  insert into projects(name,state,updated_by) select left(p_name,200),state||jsonb_build_object('meta.Project',left(p_name,200)),left(p_user,100) from projects where id=p_id returning id into v;
+  return v; end $$;
+
+grant execute on function rename_project,delete_project,duplicate_project to anon;

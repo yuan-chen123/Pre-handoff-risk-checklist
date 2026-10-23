@@ -105,6 +105,12 @@ dialog pre{white-space:pre-wrap;background:var(--bg);padding:14px;border-radius:
 .plist li a:hover{border-color:var(--brand)}
 .plist small{color:var(--muted)}
 .newp{display:flex;gap:8px}.newp input{flex:1;border:1px solid var(--line-strong);border-radius:8px;padding:8px 12px}
+.plist li{display:flex;gap:8px;align-items:stretch;margin-bottom:8px}.plist li a{flex:1;margin-bottom:0}
+.plist .acts{display:flex;gap:6px;align-items:center}
+.btn.danger{color:var(--danger);border-color:var(--danger)}.btn.danger.fill{background:var(--danger);color:#fff}
+.btn.sm{padding:4px 10px;font-size:12px}
+#dlg h2{margin:0 0 8px;font-size:18px}#dlg p{margin:0 0 12px}#dlg input{width:100%;border:1px solid var(--line-strong);border-radius:8px;padding:8px 12px;margin-bottom:12px}
+#dlg .row{display:flex;gap:8px;justify-content:flex-end}
 .cbtn{margin-top:6px;border:0;background:none;color:var(--brand);cursor:pointer;font-size:12px;padding:2px 0;text-decoration:underline}
 .thread{margin-top:6px;border-top:1px dashed var(--line-strong);padding-top:6px;font-size:12px;display:grid;gap:6px}
 .thread .c b{margin-right:6px}.thread .c time{color:var(--muted);font-size:11px}.thread .c p{margin:2px 0 0;white-space:pre-wrap}
@@ -195,6 +201,10 @@ dialog pre{white-space:pre-wrap;background:var(--bg);padding:14px;border-radius:
   <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" id="close">Close</button></div>
 </dialog>
 
+<dialog id="dlg" aria-labelledby="dlg-t"><form method="dialog" id="dlgform">
+  <h2 id="dlg-t"></h2><p id="dlg-b"></p><input id="dlg-i" aria-label="Value" hidden>
+  <div class="row"><button type="button" class="btn" id="dlg-no">Cancel</button><button class="btn primary" id="dlg-yes" value="ok"></button></div>
+</form></dialog>
 <details class="demo"><summary>Demo controls</summary>
   <div>
     <button class="btn" id="d-fill">Fill sample project</button>
@@ -255,7 +265,10 @@ const B=REMOTE?{
   get:id=>rpc("get_project",{p_id:id}),
   patch:(id,patch,user)=>rpc("patch_project",{p_id:id,p_patch:patch,p_user:user}),
   comments:id=>rpc("list_comments",{p_id:id}),
-  comment:(id,key,body,user)=>rpc("add_comment",{p_id:id,p_key:key,p_body:body,p_user:user})
+  comment:(id,key,body,user)=>rpc("add_comment",{p_id:id,p_key:key,p_body:body,p_user:user}),
+  rename:(id,name,user)=>rpc("rename_project",{p_id:id,p_name:name,p_user:user}),
+  remove:id=>rpc("delete_project",{p_id:id}),
+  duplicate:(id,name,user)=>rpc("duplicate_project",{p_id:id,p_name:name,p_user:user})
 }:{
   check:async p=>p==="password",
   list:async()=>Object.values(LDB.get().projects).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)),
@@ -263,6 +276,9 @@ const B=REMOTE?{
   get:async id=>LDB.get().projects[id]||null,
   patch:async(id,patch,user)=>{const d=LDB.get(),p=d.projects[id];if(!p)return;for(const[k,v]of Object.entries(patch)){if(v===null)delete p.state[k];else p.state[k]=v}p.updated_by=user;p.updated_at=new Date().toISOString();LDB.set(d)},
   comments:async id=>LDB.get().comments.filter(c=>c.project_id===id),
+  rename:async(id,name,user)=>{const d=LDB.get(),p=d.projects[id];if(!p)return;p.name=name;p.state["meta.Project"]=name;p.updated_by=user;p.updated_at=new Date().toISOString();LDB.set(d)},
+  remove:async id=>{const d=LDB.get();delete d.projects[id];d.comments=d.comments.filter(c=>c.project_id!==id);LDB.set(d)},
+  duplicate:async(id,name,user)=>{const d=LDB.get(),src=d.projects[id],n=uid();d.projects[n]={id:n,name,state:{...src.state,"meta.Project":name},updated_by:user,updated_at:new Date().toISOString()};LDB.set(d);return n},
   comment:async(id,key,body,user)=>{const d=LDB.get();d.comments.push({id:uid(),project_id:id,item_key:key,author:user,body,created_at:new Date().toISOString()});LDB.set(d)}
 };
 // ---- flat <-> nested state, so edits sync as per-field patches (no whole-document overwrites)
@@ -276,7 +292,8 @@ async function push(){
   pushT=null;if(!CUR)return;const now=flat(S),patch={};
   for(const k of new Set([...Object.keys(now),...Object.keys(CUR.flat)])){if(!eq(now[k]??null,CUR.flat[k]??null))patch[k]=now[k]??null}
   if(!Object.keys(patch).length){setSync(syncText());return}
-  try{await B.patch(CUR.id,patch,USER);for(const[k,v]of Object.entries(patch)){if(v===null)delete CUR.flat[k];else CUR.flat[k]=v}setSync("Saved just now")}
+  try{await B.patch(CUR.id,patch,USER);
+    const nm=(patch["meta.Project"]||"").trim();if(nm&&nm!==CUR.name){await B.rename(CUR.id,nm,USER);CUR.name=nm;topbar(nm)}for(const[k,v]of Object.entries(patch)){if(v===null)delete CUR.flat[k];else CUR.flat[k]=v}setSync("Saved just now")}
   catch(e){setSync("⚠ Not saved – retrying");pushT=setTimeout(push,3000)}
 }
 const ago=iso=>{const m=Math.round((Date.now()-new Date(iso))/60000);return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" h ago":new Date(iso).toLocaleDateString()};
@@ -287,7 +304,8 @@ async function poll(){
   try{
     const [r,cm]=await Promise.all([B.get(CUR.id),B.comments(CUR.id)]);
     let changed=false;
-    if(r){lastInfo=r;const rf=r.state||{},mine=flat(S);
+    if(!r){CUR=null;await ask({title:"Project deleted",body:"Someone deleted this project.",confirm:"Back to projects"});location.hash="#/";return}
+    if(r){lastInfo=r;if(r.name!==CUR.name){CUR.name=r.name;topbar(r.name)}const rf=r.state||{},mine=flat(S);
       for(const k of new Set([...Object.keys(rf),...Object.keys(CUR.flat)])){
         if(eq(rf[k]??null,CUR.flat[k]??null))continue;
         if(eq(mine[k]??null,CUR.flat[k]??null)){ // not edited locally -> adopt remote
@@ -531,7 +549,7 @@ $("#x-pdf").onclick=()=>{const f=document.createElement("iframe");f.style.cssTex
   f.contentDocument.open();f.contentDocument.write(reportHTML());f.contentDocument.close();
   f.onload=null;setTimeout(()=>{f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),2000)},200)};
 $("#copy").onclick=e=>{navigator.clipboard?.writeText(summaryText());e.target.textContent="Copied";setTimeout(()=>e.target.textContent="Copy as text",1500)};
-$("#d-clear").onclick=()=>{if(confirm("Clear every entry in this project for everyone?")){S=blank();S.meta.Project=CUR.name;save();init(true)}};
+$("#d-clear").onclick=async()=>{if(await ask({title:"Clear this checklist?",body:`Every answer, note and sign-off in "${CUR.name}" will be cleared for everyone. Comments are kept.`,confirm:"Clear checklist",danger:true})){S=blank();S.meta.Project=CUR.name;save();init()}};
 $("#d-fill").onclick=()=>{
   S=blank();S.meta={Project:CUR.name,Designer:"Yuan Chen",PM:"Sample PM","Eng lead":"Sample Eng",Date:"2026-10-22","Handoff target":"Sprint 42"};
   S.tri={T1:true,T2:true,T3:true};
@@ -539,6 +557,18 @@ $("#d-fill").onclick=()=>{
            C1:{res:"flag",note:"Streak banner pushes repeat spend",sev:"blocker"},
            B2:{res:"flag",note:"Amount appears on lock screen preview",sev:"accept"}};
   save();init(true)};
+// ---- modal dialogs (confirm / prompt)
+function ask({title,body="",confirm="OK",danger=false,input=null}){
+  return new Promise(res=>{
+    const d=$("#dlg"),i=$("#dlg-i"),y=$("#dlg-yes"),n=$("#dlg-no");
+    $("#dlg-t").textContent=title;$("#dlg-b").textContent=body;y.textContent=confirm;y.className="btn "+(danger?"danger fill":"primary");
+    i.hidden=input===null;i.value=input??"";
+    const done=v=>{d.close();n.onclick=y.onclick=null;res(v)};
+    y.onclick=e=>{e.preventDefault();if(input!==null&&!i.value.trim()){i.focus();return}done(input!==null?i.value.trim():true)};
+    n.onclick=()=>done(null);d.oncancel=e=>{e.preventDefault();done(null)};
+    d.showModal();(input!==null?i:n).focus();if(input!==null)i.select();
+  });
+}
 // ---- views
 function show(v){["gate","view-projects","view-project"].forEach(x=>$("#"+x).hidden=x!==v);$("#topbar").hidden=v==="gate"}
 function init(){
@@ -547,7 +577,7 @@ function init(){
   if(id){const n=document.getElementById(id);if(n){n.focus({preventScroll:true});if(sel&&n.setSelectionRange)try{n.setSelectionRange(...sel)}catch{}}}
   scrollTo(0,y)}
 function topbar(proj){
-  $("#topbar").innerHTML=`${proj?`<a href="#/">← All projects</a><b>${esc(proj)}</b>`:`<b>Projects</b>`}<span>Signed in as ${esc(USER)} · <button id="chname">change name</button> · <button id="signout">sign out</button></span><span class="sync" id="sync" role="status">${proj?esc(syncText()):REMOTE?"Shared mode":"Local mode – saved in this browser only"}</span>`;
+  $("#topbar").innerHTML=`${proj?`<a href="#/">← All projects</a><b>${esc(proj)}</b><button data-act="rename" data-id="${esc(CUR.id)}" data-name="${esc(proj)}">Rename</button><button data-act="dup" data-id="${esc(CUR.id)}" data-name="${esc(proj)}">Duplicate</button><button data-act="del" data-id="${esc(CUR.id)}" data-name="${esc(proj)}">Delete</button>`:`<b>Projects</b>`}<span>Signed in as ${esc(USER)} · <button id="chname">change name</button> · <button id="signout">sign out</button></span><span class="sync" id="sync" role="status">${proj?esc(syncText()):REMOTE?"Shared mode":"Local mode – saved in this browser only"}</span>`;
   $("#chname").onclick=()=>{const n=prompt("Your name",USER);if(n&&n.trim()){USER=n.trim();localStorage.setItem("zrc-user",USER);topbar(proj)}};
   $("#signout").onclick=()=>{sessionStorage.removeItem("zrc-pass");PASS="";CUR=null;route()};
 }
@@ -555,7 +585,10 @@ async function route(){
   if(!PASS||!USER){show("gate");$("#g-name").value=USER;return}
   const m=location.hash.match(/^#\/p\/(.+)$/);
   if(!m){CUR=null;topbar();show("view-projects");try{const ps=await B.list();
-      $("#plist").innerHTML=ps.length?ps.map(p=>`<li><a href="#/p/${esc(p.id)}"><span>${esc(p.name)}</span><small>${p.updated_by?`edited by ${esc(p.updated_by)}, ${ago(p.updated_at)}`:"new"}</small></a></li>`).join(""):"<li class='hint'>No projects yet – create the first one above.</li>"}catch{$("#p-err").textContent="Couldn't load projects."}return}
+      $("#plist").innerHTML=ps.length?ps.map(p=>`<li><a href="#/p/${esc(p.id)}"><span>${esc(p.name)}</span><small>${p.updated_by?`edited by ${esc(p.updated_by)}, ${ago(p.updated_at)}`:"new"}</small></a>
+      <span class="acts"><button class="btn sm" data-act="rename" data-id="${esc(p.id)}" data-name="${esc(p.name)}" aria-label="Rename ${esc(p.name)}">Rename</button>
+      <button class="btn sm" data-act="dup" data-id="${esc(p.id)}" data-name="${esc(p.name)}" aria-label="Duplicate ${esc(p.name)}">Duplicate</button>
+      <button class="btn sm danger" data-act="del" data-id="${esc(p.id)}" data-name="${esc(p.name)}" aria-label="Delete ${esc(p.name)}">Delete</button></span></li>`).join(""):"<li class='hint'>No projects yet – create the first one above.</li>"}catch{$("#p-err").textContent="Couldn't load projects."}return}
   try{const r=await B.get(m[1]);if(!r){location.hash="#/";return}
     CUR={id:r.id,name:r.name,flat:{...r.state}};S=unflat(r.state);S.meta.Project??=r.name;CM=await B.comments(r.id);lastInfo=r;DRAFT={};OPEN=new Set();
     topbar(r.name);show("view-project");init();window.scrollTo(0,0)}
@@ -566,6 +599,15 @@ $("#gateform").onsubmit=async e=>{e.preventDefault();const p=$("#g-pass").value;
   else $("#g-err").textContent="Incorrect password."};
 $("#newp").onsubmit=async e=>{e.preventDefault();const n=$("#newp-name").value.trim();if(!n)return;
   try{const id=await B.create(n,USER);$("#newp-name").value="";location.hash="#/p/"+id}catch{$("#p-err").textContent="Couldn't create the project."}};
+async function projAction(act,id,name){
+  try{
+    if(act==="rename"){const n=await ask({title:"Rename project",confirm:"Rename",input:name});if(n&&n!==name){await B.rename(id,n,USER);if(CUR&&CUR.id===id){CUR.name=n;S.meta.Project=n;CUR.flat["meta.Project"]=n}}}
+    if(act==="dup"){const n=await ask({title:"Duplicate project",body:"Copies all answers, notes and sign-offs (not comments) into a new project.",confirm:"Duplicate",input:name+" (copy)"});if(n){const nid=await B.duplicate(id,n,USER);location.hash="#/p/"+nid;return}}
+    if(act==="del"){if(await ask({title:`Delete "${name}"?`,body:"This permanently deletes the project, its checklist and all comments for everyone. This can't be undone.",confirm:"Delete project",danger:true})){await B.remove(id);if(CUR&&CUR.id===id){CUR=null;location.hash="#/";return}}}
+  }catch{$("#p-err").textContent="That didn't work – please try again."}
+  route();
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(b)projAction(b.dataset.act,b.dataset.id,b.dataset.name)});
 addEventListener("hashchange",route);
 (async()=>{if(PASS&&!(await B.check(PASS)))PASS="";route()})();
 </script>

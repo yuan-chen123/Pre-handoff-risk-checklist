@@ -36,7 +36,7 @@ h1{font-size:30px;margin:0;display:inline}
 .triage h2{font-size:16px;margin:0 0 14px}.triage h2 span{font-weight:400;color:var(--muted);font-size:12px;margin-left:10px}
 .tgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
 .tcard{background:#fff;border-radius:12px;padding:14px;box-shadow:0 4px 2px rgba(0,0,0,.04);display:flex;flex-direction:column;cursor:pointer;border:2px solid transparent;position:relative}
-.tcard:has(input:checked){border-color:var(--brand)}
+.tcard:has(input:checked){border-color:var(--brand)}.tcard{cursor:default}
 .tcard .id{color:var(--brand);font-weight:600;font-size:12px}
 .tcard p{margin:6px 0 10px;flex:1}
 .tcard small{color:var(--muted);font-weight:500}
@@ -88,13 +88,57 @@ dialog pre{white-space:pre-wrap;background:var(--bg);padding:14px;border-radius:
 .demo summary{list-style:none;background:var(--ink);color:#fff;border-radius:20px;padding:6px 14px;cursor:pointer;font-size:12px}
 .demo div{background:#fff;border:1px solid var(--line-strong);border-radius:12px;padding:10px;margin-bottom:8px;display:grid;gap:6px}
 .sr{position:absolute;left:-9999px}
+[hidden]{display:none!important}
+.topbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--ink);color:#fff;padding:8px 40px;font-size:12px}
+.topbar a,.topbar button{color:#fff;background:none;border:0;cursor:pointer;text-decoration:underline;padding:0}
+.topbar .sync{margin-left:auto}
+.center{min-height:100vh;display:grid;place-items:center;padding:24px}
+.panel{background:#fff;border-radius:var(--radius);padding:32px;max-width:440px;width:100%;box-shadow:0 4px 2px rgba(0,0,0,.04)}
+.panel h1{display:block;font-size:24px;margin-bottom:8px}
+.panel label{display:block;font-size:12px;color:var(--muted);margin:14px 0 4px}
+.panel input[type=password],.panel input[type=text]{width:100%;border:1px solid var(--line-strong);border-radius:8px;padding:9px 12px}
+.panel .btn{margin-top:18px;width:100%;padding:10px}
+.notice{background:#FFF3D6;border:1px solid #E5C26B;border-radius:10px;padding:10px 12px;font-size:13px;margin:16px 0}
+.projects{max-width:760px;margin:0 auto;padding:32px 24px}
+.plist{list-style:none;padding:0;margin:16px 0}
+.plist li a{display:flex;justify-content:space-between;gap:12px;background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:8px;text-decoration:none;color:inherit;border:1px solid var(--line)}
+.plist li a:hover{border-color:var(--brand)}
+.plist small{color:var(--muted)}
+.newp{display:flex;gap:8px}.newp input{flex:1;border:1px solid var(--line-strong);border-radius:8px;padding:8px 12px}
+.cbtn{margin-top:6px;border:0;background:none;color:var(--brand);cursor:pointer;font-size:12px;padding:2px 0;text-decoration:underline}
+.thread{margin-top:6px;border-top:1px dashed var(--line-strong);padding-top:6px;font-size:12px;display:grid;gap:6px}
+.thread .c b{margin-right:6px}.thread .c time{color:var(--muted);font-size:11px}.thread .c p{margin:2px 0 0;white-space:pre-wrap}
+.thread textarea{width:100%;min-height:44px;border:1px solid var(--line-strong);border-radius:6px;padding:5px 8px;resize:vertical}
+.thread button{justify-self:end}
+.tcard .tq{cursor:pointer;display:flex;flex-direction:column;flex:1}
+@media(max-width:700px){.topbar{padding:8px 16px}}
 @media(max-width:1100px){.tgrid{grid-template-columns:repeat(3,1fr)}.modules{grid-template-columns:repeat(2,1fr)}.why{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.wrap{padding:20px 16px}.status{margin:16px -16px 0;padding:10px 16px}.tgrid,.modules,.bottom{grid-template-columns:1fr}.sign{padding:20px 0 0;border:0}.meta{grid-template-columns:1fr 1fr}}
 @media(prefers-reduced-motion:no-preference){.mod{transition:opacity .2s}}
 </style>
 </head>
 <body>
-<div class="wrap">
+<main id="gate" class="center" hidden>
+  <form class="panel" id="gateform">
+    <h1>Pre-handoff risk checklist</h1>
+    <div class="notice" role="note"><b>For internal use only.</b> This checklist contains confidential Zip project information. Don't share the link or its contents outside Zip.</div>
+    <label for="g-name">Your name (shown on edits and comments)</label>
+    <input type="text" id="g-name" autocomplete="name" required>
+    <label for="g-pass">Password</label>
+    <input type="password" id="g-pass" autocomplete="current-password" required>
+    <p class="err" id="g-err" role="alert"></p>
+    <button class="btn primary" type="submit">Enter</button>
+  </form>
+</main>
+<div id="topbar" class="topbar" hidden></div>
+<main id="view-projects" class="projects" hidden>
+  <h1 style="display:block">Projects</h1>
+  <p class="lede">One shared checklist per project. Everyone with access can edit and comment; changes appear for others within a few seconds.</p>
+  <form class="newp" id="newp"><input id="newp-name" placeholder="New project name" aria-label="New project name" required><button class="btn primary">Create</button></form>
+  <p class="err" id="p-err" role="alert"></p>
+  <ul class="plist" id="plist"></ul>
+</main>
+<div class="wrap" id="view-project" hidden>
 <header>
   <div>
     <h1>Pre-handoff risk checklist</h1><span class="ver">v0.1 · pilot draft</span>
@@ -158,6 +202,7 @@ dialog pre{white-space:pre-wrap;background:var(--bg);padding:14px;border-radius:
   </div>
 </details>
 
+<script src="config.js"></script>
 <script>
 const TRIAGE=[
  {id:"T1",q:"Changes how a customer pays, repays, borrows or sees what they owe (limits, fees, due dates, autopay)?",opens:["C","D"]},
@@ -195,11 +240,83 @@ const MODS={
   "Compliance reviewed claims and disclosures for each market"]}
 };
 const META=["Project","Designer","PM","Eng lead","Date","Handoff target"];
-const KEY="zip-risk-checklist-v0.1";
-let S=load();
 function blank(){return{meta:{},tri:{},items:{},sign:{},esc:""}}
-function load(){try{return JSON.parse(localStorage.getItem(KEY))||blank()}catch{return blank()}}
-function save(){localStorage.setItem(KEY,JSON.stringify(S))}
+let S=blank();
+const CFG=window.ZIP_CONFIG||{}, REMOTE=!!(CFG.supabaseUrl&&CFG.anonKey);
+let PASS=sessionStorage.getItem("zrc-pass")||"", USER=localStorage.getItem("zrc-user")||"";
+const uid=()=>crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random();
+// ---- storage backends: same interface, local (this browser) or Supabase (shared)
+const rpc=async(fn,args)=>{const r=await fetch(`${CFG.supabaseUrl}/rest/v1/rpc/${fn}`,{method:"POST",headers:{apikey:CFG.anonKey,Authorization:"Bearer "+CFG.anonKey,"Content-Type":"application/json"},body:JSON.stringify({p_pass:PASS,...args})});if(!r.ok)throw new Error(await r.text());return r.status===204?null:r.json()};
+const LDB={get:()=>{try{return JSON.parse(localStorage.getItem("zrc-db"))||{projects:{},comments:[]}}catch{return{projects:{},comments:[]}}},set:d=>localStorage.setItem("zrc-db",JSON.stringify(d))};
+const B=REMOTE?{
+  check:async p=>{PASS=p;try{return await rpc("check_pass",{})===true}catch{return false}},
+  list:()=>rpc("list_projects",{}),
+  create:(name,user)=>rpc("create_project",{p_name:name,p_user:user}),
+  get:id=>rpc("get_project",{p_id:id}),
+  patch:(id,patch,user)=>rpc("patch_project",{p_id:id,p_patch:patch,p_user:user}),
+  comments:id=>rpc("list_comments",{p_id:id}),
+  comment:(id,key,body,user)=>rpc("add_comment",{p_id:id,p_key:key,p_body:body,p_user:user})
+}:{
+  check:async p=>p==="password",
+  list:async()=>Object.values(LDB.get().projects).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)),
+  create:async(name,user)=>{const d=LDB.get(),id=uid(),now=new Date().toISOString();d.projects[id]={id,name,state:{"meta.Project":name},updated_by:user,updated_at:now};LDB.set(d);return id},
+  get:async id=>LDB.get().projects[id]||null,
+  patch:async(id,patch,user)=>{const d=LDB.get(),p=d.projects[id];if(!p)return;for(const[k,v]of Object.entries(patch)){if(v===null)delete p.state[k];else p.state[k]=v}p.updated_by=user;p.updated_at=new Date().toISOString();LDB.set(d)},
+  comments:async id=>LDB.get().comments.filter(c=>c.project_id===id),
+  comment:async(id,key,body,user)=>{const d=LDB.get();d.comments.push({id:uid(),project_id:id,item_key:key,author:user,body,created_at:new Date().toISOString()});LDB.set(d)}
+};
+// ---- flat <-> nested state, so edits sync as per-field patches (no whole-document overwrites)
+function flat(s){const o={};for(const[k,v]of Object.entries(s.meta))o["meta."+k]=v;for(const[k,v]of Object.entries(s.tri))o["tri."+k]=v;for(const[k,v]of Object.entries(s.items))o["items."+k]=v;for(const[k,v]of Object.entries(s.sign))o["sign."+k]=v;if(s.esc)o.esc=s.esc;return o}
+function unflat(f){const s=blank();for(const[k,v]of Object.entries(f)){if(k==="esc")s.esc=v;else{const i=k.indexOf(".");(s[k.slice(0,i)]||(s[k.slice(0,i)]={}))[k.slice(i+1)]=v}}return s}
+const eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+let CUR=null, CM=[], OPEN=new Set(), DRAFT={}, pendingRender=false, pushT=null, lastInfo={};
+function setSync(t){const el=$("#sync");if(el)el.textContent=t}
+function save(){clearTimeout(pushT);setSync("Saving…");pushT=setTimeout(push,400)}
+async function push(){
+  pushT=null;if(!CUR)return;const now=flat(S),patch={};
+  for(const k of new Set([...Object.keys(now),...Object.keys(CUR.flat)])){if(!eq(now[k]??null,CUR.flat[k]??null))patch[k]=now[k]??null}
+  if(!Object.keys(patch).length){setSync(syncText());return}
+  try{await B.patch(CUR.id,patch,USER);for(const[k,v]of Object.entries(patch)){if(v===null)delete CUR.flat[k];else CUR.flat[k]=v}setSync("Saved just now")}
+  catch(e){setSync("⚠ Not saved – retrying");pushT=setTimeout(push,3000)}
+}
+const ago=iso=>{const m=Math.round((Date.now()-new Date(iso))/60000);return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" h ago":new Date(iso).toLocaleDateString()};
+const syncText=()=>lastInfo.updated_by?`Last edit by ${lastInfo.updated_by}, ${ago(lastInfo.updated_at)}`:"Synced";
+const typing=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.type!=="checkbox"&&a.type!=="radio"&&!a.closest("#gateform")};
+async function poll(){
+  if(!CUR||document.hidden||pushT)return;
+  try{
+    const [r,cm]=await Promise.all([B.get(CUR.id),B.comments(CUR.id)]);
+    let changed=false;
+    if(r){lastInfo=r;const rf=r.state||{},mine=flat(S);
+      for(const k of new Set([...Object.keys(rf),...Object.keys(CUR.flat)])){
+        if(eq(rf[k]??null,CUR.flat[k]??null))continue;
+        if(eq(mine[k]??null,CUR.flat[k]??null)){ // not edited locally -> adopt remote
+          const n=flat(S);if(rf[k]===undefined)delete n[k];else n[k]=rf[k];S=unflat(n);changed=true}
+        if(rf[k]===undefined)delete CUR.flat[k];else CUR.flat[k]=rf[k];
+      }}
+    if(cm&&cm.length!==CM.length){CM=cm;changed=true}
+    setSync(syncText());
+    if(changed)init(true)
+  }catch{setSync("⚠ Offline – retrying")}
+}
+setInterval(poll,3000);
+document.addEventListener("focusout",()=>setTimeout(()=>{if(pendingRender&&!typing()){pendingRender=false;init(true)}},50));
+// ---- comments
+const commentsFor=k=>CM.filter(c=>c.item_key===k).sort((a,b)=>a.created_at.localeCompare(b.created_at));
+function threadHTML(k){
+  const cs=commentsFor(k), open=OPEN.has(k);
+  return `<button type="button" class="cbtn" data-c="${k}" aria-expanded="${open}">💬 ${cs.length?cs.length+" comment"+(cs.length>1?"s":""):"Comment"}</button>`+
+  (open?`<div class="thread">${cs.map(c=>`<div class="c"><b>${esc(c.author)}</b><time>${ago(c.created_at)}</time><p>${esc(c.body)}</p></div>`).join("")}
+   <label class="sr" for="cm-${k}">Add a comment</label><textarea id="cm-${k}" data-draft="${k}" placeholder="Add feedback…">${esc(DRAFT[k]||"")}</textarea>
+   <button type="button" class="btn" data-post="${k}">Post</button></div>`:"");
+}
+document.addEventListener("click",async e=>{
+  const c=e.target.closest("[data-c]"),p=e.target.closest("[data-post]");
+  if(c){e.preventDefault();const k=c.dataset.c;OPEN.has(k)?OPEN.delete(k):OPEN.add(k);init(true);if(OPEN.has(k))document.getElementById("cm-"+k)?.focus()}
+  if(p){const k=p.dataset.post,t=(DRAFT[k]||"").trim();if(!t)return;DRAFT[k]="";
+    try{await B.comment(CUR.id,k,t,USER);CM=await B.comments(CUR.id)}catch{DRAFT[k]=t}init(true);document.getElementById("cm-"+k)?.focus()}
+});
+document.addEventListener("input",e=>{if(e.target.dataset.draft)DRAFT[e.target.dataset.draft]=e.target.value});
 const $=(s,r=document)=>r.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -237,8 +354,8 @@ function renderMeta(){
 }
 function renderTriage(){
   $("#triage").innerHTML=TRIAGE.map(t=>`
-   <label class="tcard"><input type="checkbox" data-t="${t.id}" ${S.tri[t.id]?"checked":""} aria-label="${t.id}: flag">
-    <span class="id">${t.id}</span><p>${esc(t.q)}</p><small>Opens ${t.opens.join(" + ")}</small></label>`).join("");
+   <div class="tcard"><input type="checkbox" id="tg-${t.id}" data-t="${t.id}" ${S.tri[t.id]?"checked":""}>
+    <label class="tq" for="tg-${t.id}"><span class="id">${t.id}</span><p>${esc(t.q)}</p><small>Opens ${t.opens.join(" + ")}</small></label>${threadHTML(t.id)}</div>`).join("");
   $("#triage").onchange=e=>{S.tri[e.target.dataset.t]=e.target.checked;save();renderModules();renderStatus();renderSign()};
 }
 function renderModules(){
@@ -272,7 +389,7 @@ function itemHTML(k,i,txt){
     </div>`;
   }
   return `<div class="item"><p id="p-${key}">${esc(txt)}</p>
-    <div class="seg" role="radiogroup" aria-labelledby="p-${key}">${radio("met","Met")}${radio("flag","Flag")}${radio("na","N/A")}</div>${flag}</div>`;
+    <div class="seg" role="radiogroup" aria-labelledby="p-${key}">${radio("met","Met")}${radio("flag","Flag")}${radio("na","N/A")}</div>${flag}<div>${threadHTML(key)}</div></div>`;
 }
 function renderStatus(){
   const r=stats(), n=needs(r);
@@ -337,7 +454,8 @@ function model(){
         return {item:q,answer:RES[it.res]||"Unanswered",note:it.note||"",severity:it.sev||"",
           owner:it.owner||"",date:it.date||"",resolved:it.sev==="blocker"?!!it.resolved:null}})})),
     signoff:SIGNS.map(([l,k])=>({role:l.replace(/ \(.*/,""),required:["design","pm","eng"].includes(k)||n[k],signed:!!S.sign[k]})),
-    escalation:S.esc||""
+    escalation:S.esc||"",
+    comments:[...CM].sort((a,b)=>a.created_at.localeCompare(b.created_at)).map(c=>({on:c.item_key,author:c.author,at:c.created_at,text:c.body}))
   };
 }
 function summaryText(){
@@ -355,6 +473,7 @@ function summaryText(){
     L.push(`  Evidence / link / owner: ${m.evidence||"—"}`)});
   L.push("","SIGN-OFF");d.signoff.forEach(s=>L.push(`  [${s.signed?"x":" "}] ${s.role}${s.required?"":" (not required)"}`));
   L.push(`Escalation contact: ${d.escalation||"—"}`);
+  L.push("","COMMENTS");if(!d.comments.length)L.push("  none");d.comments.forEach(c=>L.push(`  [${c.on}] ${c.author} (${new Date(c.at).toLocaleString()}): ${c.text}`));
   return L.join("\n");
 }
 function reportHTML(){
@@ -381,7 +500,8 @@ ${d.modules.map(m=>`<h2>Module ${m.id} · ${e(m.name)}</h2><p class="dim">${m.op
 ${m.items.map(i=>`<tr class="${i.answer==="Flag"?"flag":""}"><td>${e(i.item)}</td><td>${m.opened?i.answer:"—"}</td><td>${pill(i.severity)}${i.resolved===null?"":i.resolved?" resolved":" <b>OPEN</b>"}</td><td>${linkify(i.note)}</td><td>${e(i.owner)}</td><td>${e(i.date)}</td></tr>`).join("")}</table>
 <p><b>Evidence / link / owner:</b> ${linkify(m.evidence)||"—"}</p>`).join("")}
 <h2>Sign-off</h2><table><tr><th>Role</th><th>Required</th><th>Signed</th></tr>${d.signoff.map(s=>`<tr><td>${s.role}</td><td>${s.required?"Yes":"No (not flagged)"}</td><td>${s.signed?"✓ Signed":"—"}</td></tr>`).join("")}</table>
-<p><b>Escalation contact:</b> ${e(d.escalation)||"—"}</p></html>`;
+<p><b>Escalation contact:</b> ${e(d.escalation)||"—"}</p>
+<h2>Comments</h2>${d.comments.length?`<table><tr><th>On</th><th>Author</th><th>When</th><th>Comment</th></tr>${d.comments.map(c=>`<tr><td>${e(c.on)}</td><td>${e(c.author)}</td><td>${new Date(c.at).toLocaleString()}</td><td>${linkify(c.text)}</td></tr>`).join("")}</table>`:"<p class='dim'>No comments.</p>"}</html>`;
 }
 function csvText(){
   const d=model(), q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
@@ -393,6 +513,7 @@ function csvText(){
     rows.push(["Module "+m.id+" evidence",m.id,"Evidence / link / owner","","","","",m.evidence])});
   d.signoff.forEach(s=>rows.push(["Sign-off","",s.role,"",s.signed?"Signed":"Not signed","","",s.required?"Required":"Not required"]));
   rows.push(["Escalation","","Escalation contact","","","","",d.escalation]);
+  d.comments.forEach(c=>rows.push(["Comment",c.on,c.text,"","","","","",c.author,c.at]));
   return "﻿"+rows.map(r=>r.map(q).join(",")).join("\r\n");
 }
 const fname=ext=>`risk-checklist-${(S.meta.Project||"untitled").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"untitled"}.${ext}`;
@@ -410,16 +531,43 @@ $("#x-pdf").onclick=()=>{const f=document.createElement("iframe");f.style.cssTex
   f.contentDocument.open();f.contentDocument.write(reportHTML());f.contentDocument.close();
   f.onload=null;setTimeout(()=>{f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),2000)},200)};
 $("#copy").onclick=e=>{navigator.clipboard?.writeText(summaryText());e.target.textContent="Copied";setTimeout(()=>e.target.textContent="Copy as text",1500)};
-$("#d-clear").onclick=()=>{S=blank();save();init()};
+$("#d-clear").onclick=()=>{if(confirm("Clear every entry in this project for everyone?")){S=blank();S.meta.Project=CUR.name;save();init(true)}};
 $("#d-fill").onclick=()=>{
-  S=blank();S.meta={Project:"Autopay reminders",Designer:"Yuan Chen",PM:"Sample PM","Eng lead":"Sample Eng",Date:"2026-10-22","Handoff target":"Sprint 42"};
+  S=blank();S.meta={Project:CUR.name,Designer:"Yuan Chen",PM:"Sample PM","Eng lead":"Sample Eng",Date:"2026-10-22","Handoff target":"Sprint 42"};
   S.tri={T1:true,T2:true,T3:true};
   S.items={C0:{res:"flag",note:"Teens in shared-account households not covered",sev:"mitigate",owner:"Sam",date:"2026-11-05"},
            C1:{res:"flag",note:"Streak banner pushes repeat spend",sev:"blocker"},
            B2:{res:"flag",note:"Amount appears on lock screen preview",sev:"accept"}};
-  save();init()};
-function init(){renderMeta();renderTriage();renderModules();renderStatus();renderSign()}
-init();
+  save();init(true)};
+// ---- views
+function show(v){["gate","view-projects","view-project"].forEach(x=>$("#"+x).hidden=x!==v);$("#topbar").hidden=v==="gate"}
+function init(){
+  const a=document.activeElement,id=a&&a.id,sel=a&&a.selectionStart!=null?[a.selectionStart,a.selectionEnd]:null,y=scrollY;
+  renderMeta();renderTriage();renderModules();renderStatus();renderSign();
+  if(id){const n=document.getElementById(id);if(n){n.focus({preventScroll:true});if(sel&&n.setSelectionRange)try{n.setSelectionRange(...sel)}catch{}}}
+  scrollTo(0,y)}
+function topbar(proj){
+  $("#topbar").innerHTML=`${proj?`<a href="#/">← All projects</a><b>${esc(proj)}</b>`:`<b>Projects</b>`}<span>Signed in as ${esc(USER)} · <button id="chname">change name</button> · <button id="signout">sign out</button></span><span class="sync" id="sync" role="status">${proj?esc(syncText()):REMOTE?"Shared mode":"Local mode – saved in this browser only"}</span>`;
+  $("#chname").onclick=()=>{const n=prompt("Your name",USER);if(n&&n.trim()){USER=n.trim();localStorage.setItem("zrc-user",USER);topbar(proj)}};
+  $("#signout").onclick=()=>{sessionStorage.removeItem("zrc-pass");PASS="";CUR=null;route()};
+}
+async function route(){
+  if(!PASS||!USER){show("gate");$("#g-name").value=USER;return}
+  const m=location.hash.match(/^#\/p\/(.+)$/);
+  if(!m){CUR=null;topbar();show("view-projects");try{const ps=await B.list();
+      $("#plist").innerHTML=ps.length?ps.map(p=>`<li><a href="#/p/${esc(p.id)}"><span>${esc(p.name)}</span><small>${p.updated_by?`edited by ${esc(p.updated_by)}, ${ago(p.updated_at)}`:"new"}</small></a></li>`).join(""):"<li class='hint'>No projects yet – create the first one above.</li>"}catch{$("#p-err").textContent="Couldn't load projects."}return}
+  try{const r=await B.get(m[1]);if(!r){location.hash="#/";return}
+    CUR={id:r.id,name:r.name,flat:{...r.state}};S=unflat(r.state);S.meta.Project??=r.name;CM=await B.comments(r.id);lastInfo=r;DRAFT={};OPEN=new Set();
+    topbar(r.name);show("view-project");init();window.scrollTo(0,0)}
+  catch{location.hash="#/"}
+}
+$("#gateform").onsubmit=async e=>{e.preventDefault();const p=$("#g-pass").value;
+  if(await B.check(p)){PASS=p;USER=$("#g-name").value.trim();sessionStorage.setItem("zrc-pass",p);localStorage.setItem("zrc-user",USER);$("#g-err").textContent="";route()}
+  else $("#g-err").textContent="Incorrect password."};
+$("#newp").onsubmit=async e=>{e.preventDefault();const n=$("#newp-name").value.trim();if(!n)return;
+  try{const id=await B.create(n,USER);$("#newp-name").value="";location.hash="#/p/"+id}catch{$("#p-err").textContent="Couldn't create the project."}};
+addEventListener("hashchange",route);
+(async()=>{if(PASS&&!(await B.check(PASS)))PASS="";route()})();
 </script>
 </body>
 </html>

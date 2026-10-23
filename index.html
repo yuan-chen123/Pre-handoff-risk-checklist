@@ -137,12 +137,18 @@ dialog pre{white-space:pre-wrap;background:var(--bg);padding:14px;border-radius:
 </div>
 
 <dialog id="summary" aria-labelledby="sum-h">
-  <h2 id="sum-h" style="margin-top:0">Handoff summary</h2>
-  <pre id="sumtext"></pre>
-  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-    <button class="btn" id="copy">Copy</button>
-    <button class="btn primary" id="close">Close</button>
+  <h2 id="sum-h" style="margin-top:0">Export checklist</h2>
+  <p id="exp-state" class="hint" role="status" style="font-size:13px"></p>
+  <p class="hint" style="font-size:13px">Every export contains the project details, all six triage answers, all four modules with every item's answer (including Met, N/A and unopened modules), flag notes, severity, owners, dates, evidence, sign-offs and escalation.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">
+    <button class="btn primary" id="x-html">Download report (.html)</button>
+    <button class="btn" id="x-pdf">Print / Save as PDF</button>
+    <button class="btn" id="x-csv">Download .csv</button>
+    <button class="btn" id="x-json">Download .json</button>
+    <button class="btn" id="copy">Copy as text</button>
   </div>
+  <pre id="sumtext"></pre>
+  <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" id="close">Close</button></div>
 </dialog>
 
 <details class="demo"><summary>Demo controls</summary>
@@ -274,8 +280,8 @@ function renderStatus(){
   const verdict=blocked?`<span class="verdict no">Not ready · ${r.blockerOpen} open blocker${r.blockerOpen>1?"s":""}</span>`
     :incomplete?`<span class="verdict no">Not ready · ${r.unanswered?r.unanswered+" unanswered":""}${r.unanswered&&r.invalid?", ":""}${r.invalid?r.invalid+" flag"+(r.invalid>1?"s":"")+" missing details":""}</span>`
     :`<span class="verdict ok">Ready for sign-off</span>`;
-  $("#status").innerHTML=`${verdict}<span class="pill blocker">${r.blocker} Blocker</span><span class="pill mitigate">${r.mitigate} Mitigate</span><span class="pill accept">${r.accept} Accept</span><span class="spacer"></span><button class="btn primary" id="gen">Handoff summary</button>`;
-  $("#gen").onclick=showSummary;
+  $("#status").innerHTML=`${verdict}<span class="pill blocker">${r.blocker} Blocker</span><span class="pill mitigate">${r.mitigate} Mitigate</span><span class="pill accept">${r.accept} Accept</span><span class="spacer"></span><button class="btn primary" id="gen">Export</button>`;
+  $("#gen").onclick=showExport;
 }
 const SIGNS=[["Design","design"],["PM","pm"],["Eng","eng"],["Compliance/Legal (if flagged)","legal"],["CX (if flagged)","cx"]];
 function renderSign(){
@@ -308,22 +314,102 @@ function update(t,soft){
       if(old) old.outerHTML=errs.length?`<div class="err" role="alert">${errs.join(" ")}</div>`:`<div class="hint">✓ Complete</div>`}
   } else renderModules();
 }
+const RES={met:"Met",flag:"Flag",na:"N/A"};
+function readiness(){
+  const r=stats(), n=needs(r), miss=[];
+  if(r.blockerOpen) miss.push(r.blockerOpen+" unresolved blocker(s)");
+  if(r.unanswered) miss.push(r.unanswered+" unanswered item(s)");
+  if(r.invalid) miss.push(r.invalid+" flag(s) missing details");
+  SIGNS.forEach(([l,k])=>{ if((["design","pm","eng"].includes(k)||n[k]) && !S.sign[k]) miss.push("sign-off: "+l.replace(/ \(.*/,"")) });
+  return {r,n,miss,complete:!miss.length};
+}
+function model(){
+  const op=opened(), {r,n,miss,complete}=readiness();
+  return {
+    checklist:"Pre-handoff risk checklist",version:"v0.1 pilot draft",exportedAt:new Date().toISOString(),
+    status:complete?"Complete":"DRAFT – incomplete",outstanding:miss,
+    project:Object.fromEntries(META.map(m=>[m,S.meta[m]||""])),
+    triage:TRIAGE.map(t=>({id:t.id,question:t.q,flagged:!!S.tri[t.id],opens:t.opens})),
+    counts:{blocker:r.blocker,blockerUnresolved:r.blockerOpen,mitigate:r.mitigate,accept:r.accept},
+    modules:Object.entries(MODS).map(([k,m])=>({id:k,name:m.name,opened:!!op[k],openedBy:op[k]||[],
+      evidence:S.items["ev"+k]||"",
+      items:m.items.map((q,i)=>{const it=S.items[itemKey(k,i)]||{};
+        return {item:q,answer:RES[it.res]||"Unanswered",note:it.note||"",severity:it.sev||"",
+          owner:it.owner||"",date:it.date||"",resolved:it.sev==="blocker"?!!it.resolved:null}})})),
+    signoff:SIGNS.map(([l,k])=>({role:l.replace(/ \(.*/,""),required:["design","pm","eng"].includes(k)||n[k],signed:!!S.sign[k]})),
+    escalation:S.esc||""
+  };
+}
 function summaryText(){
-  const r=stats(), op=opened(), L=[];
-  L.push(`PRE-HANDOFF RISK CHECKLIST v0.1`);
-  META.forEach(m=>L.push(`${m}: ${S.meta[m]||"—"}`));
-  L.push("",`Triage flags: ${TRIAGE.filter(t=>S.tri[t.id]).map(t=>t.id).join(", ")||"none"}`,`Modules opened: ${Object.keys(op).join(", ")||"none"}`,
-    `Blocker ${r.blocker} (${r.blockerOpen} unresolved) · Mitigate ${r.mitigate} · Accept ${r.accept}`,"");
-  Object.keys(op).forEach(m=>MODS[m].items.forEach((txt,i)=>{
-    const it=S.items[itemKey(m,i)]; if(it?.res!=="flag")return;
-    L.push(`[${m}] ${txt}`,`   ${(it.sev||"unrated").toUpperCase()}${it.sev==="blocker"?(it.resolved?" (resolved)":" (OPEN)"):""} — ${it.note||"no note"}${it.owner?` — owner ${it.owner}`:""}${it.date?` — ${it.date}`:""}`)}));
-  L.push("","Sign-off: "+SIGNS.filter(([,k])=>S.sign[k]).map(([l])=>l.replace(/ \(.*/,"")).join(", ")||"none");
-  if(S.esc)L.push("Escalation: "+S.esc);
+  const d=model(), L=[];
+  L.push(d.checklist.toUpperCase()+" · "+d.version,"Status: "+d.status);
+  if(d.outstanding.length) L.push("Outstanding: "+d.outstanding.join("; "));
+  L.push("","PROJECT");Object.entries(d.project).forEach(([k,v])=>L.push(`  ${k}: ${v||"—"}`));
+  L.push("","TRIAGE");d.triage.forEach(t=>L.push(`  ${t.id} [${t.flagged?"FLAGGED":"no"}] ${t.question} (opens ${t.opens.join("+")})`));
+  L.push("",`SEVERITY  Blocker ${d.counts.blocker} (${d.counts.blockerUnresolved} unresolved) · Mitigate ${d.counts.mitigate} · Accept ${d.counts.accept}`);
+  d.modules.forEach(m=>{
+    L.push("",`MODULE ${m.id} · ${m.name} — ${m.opened?"opened by "+m.openedBy.join(", "):"not opened by triage"}`);
+    m.items.forEach(i=>{
+      L.push(`  [${i.answer}] ${i.item}`);
+      if(i.answer==="Flag") L.push(`      Severity: ${i.severity||"unrated"}${i.resolved!==null?(i.resolved?" (resolved)":" (OPEN)"):""} | Note: ${i.note||"—"} | Owner: ${i.owner||"—"} | Date: ${i.date||"—"}`)});
+    L.push(`  Evidence / link / owner: ${m.evidence||"—"}`)});
+  L.push("","SIGN-OFF");d.signoff.forEach(s=>L.push(`  [${s.signed?"x":" "}] ${s.role}${s.required?"":" (not required)"}`));
+  L.push(`Escalation contact: ${d.escalation||"—"}`);
   return L.join("\n");
 }
-function showSummary(){$("#sumtext").textContent=summaryText();$("#summary").showModal()}
+function reportHTML(){
+  const d=model(), e=esc, linkify=t=>e(t).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1">$1</a>');
+  const pill=s=>s?`<span class="p ${s}">${s[0].toUpperCase()+s.slice(1)}</span>`:"";
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><title>Risk checklist – ${e(d.project.Project||"untitled")}</title>
+<style>body{font:13px/1.45 Helvetica,Arial,sans-serif;color:#1A0826;max-width:900px;margin:32px auto;padding:0 24px}
+h1{font-size:24px;margin:0}h2{font-size:15px;border-bottom:2px solid #6542BE;padding-bottom:4px;margin:26px 0 8px}h3{font-size:14px;margin:18px 0 4px}
+.badge{display:inline-block;background:${d.status==="Complete"?"#DCF995":"#FAEC7D"};border-radius:12px;padding:2px 12px;font-weight:600;font-size:12px}
+table{border-collapse:collapse;width:100%;margin:6px 0}td,th{border:1px solid #C6C3C5;padding:5px 8px;text-align:left;vertical-align:top}th{background:#EDE6FF}
+.meta td:nth-child(odd){background:#F4F4F4;width:15%;font-weight:600}.p{border-radius:10px;padding:1px 9px;font-size:11px;font-weight:600}
+.blocker{background:#1A0826;color:#fff}.mitigate{background:#FAEC7D}.accept{background:#DCF995}.dim{color:#786E7A}
+.flag{background:#FAF8FF}.out{background:#FFF3F2;border:1px solid #B3261E;padding:8px 12px;border-radius:8px;margin-top:10px}
+@media print{body{margin:0}h2,h3,tr{break-after:avoid;break-inside:avoid}}</style>
+<h1>${e(d.checklist)}</h1><p class="dim">${e(d.version)} · exported ${new Date(d.exportedAt).toLocaleString()}</p>
+<p><span class="badge">${e(d.status)}</span></p>
+${d.outstanding.length?`<div class="out"><b>Outstanding:</b><ul>${d.outstanding.map(o=>`<li>${e(o)}</li>`).join("")}</ul></div>`:""}
+<h2>Project</h2><table class="meta">${[0,2,4].map(i=>`<tr>${[i,i+1].map(j=>`<td>${META[j]}</td><td>${e(d.project[META[j]])||"—"}</td>`).join("")}</tr>`).join("")}</table>
+<h2>Step 0 · Triage</h2><table><tr><th>#</th><th>Question</th><th>Answer</th><th>Opens</th></tr>
+${d.triage.map(t=>`<tr><td>${t.id}</td><td>${e(t.question)}</td><td><b>${t.flagged?"Flagged":"Not flagged"}</b></td><td>${t.opens.join(" + ")}</td></tr>`).join("")}</table>
+<h2>Severity summary</h2><p>${pill("blocker")} ${d.counts.blocker} (${d.counts.blockerUnresolved} unresolved) &nbsp; ${pill("mitigate")} ${d.counts.mitigate} &nbsp; ${pill("accept")} ${d.counts.accept}</p>
+${d.modules.map(m=>`<h2>Module ${m.id} · ${e(m.name)}</h2><p class="dim">${m.opened?"Opened by "+m.openedBy.join(", "):"Not opened by triage – items not assessed"}</p>
+<table><tr><th style="width:44%">Item</th><th>Answer</th><th>Severity</th><th>Note / link</th><th>Owner</th><th>Date</th></tr>
+${m.items.map(i=>`<tr class="${i.answer==="Flag"?"flag":""}"><td>${e(i.item)}</td><td>${m.opened?i.answer:"—"}</td><td>${pill(i.severity)}${i.resolved===null?"":i.resolved?" resolved":" <b>OPEN</b>"}</td><td>${linkify(i.note)}</td><td>${e(i.owner)}</td><td>${e(i.date)}</td></tr>`).join("")}</table>
+<p><b>Evidence / link / owner:</b> ${linkify(m.evidence)||"—"}</p>`).join("")}
+<h2>Sign-off</h2><table><tr><th>Role</th><th>Required</th><th>Signed</th></tr>${d.signoff.map(s=>`<tr><td>${s.role}</td><td>${s.required?"Yes":"No (not flagged)"}</td><td>${s.signed?"✓ Signed":"—"}</td></tr>`).join("")}</table>
+<p><b>Escalation contact:</b> ${e(d.escalation)||"—"}</p></html>`;
+}
+function csvText(){
+  const d=model(), q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const rows=[["Section","ID","Item","Opened","Answer","Severity","Resolved","Note / link","Owner","Date"]];
+  rows.push(["Status","","",d.status,d.outstanding.join("; ")]);
+  Object.entries(d.project).forEach(([k,v])=>rows.push(["Project","",k,"",v]));
+  d.triage.forEach(t=>rows.push(["Triage",t.id,t.question,"",t.flagged?"Flagged":"Not flagged"]));
+  d.modules.forEach(m=>{m.items.forEach((i,n)=>rows.push(["Module "+m.id+" "+m.name,m.id+(n+1),i.item,m.opened?"Yes":"No",m.opened?i.answer:"Not assessed",i.severity,i.resolved===null?"":i.resolved?"Yes":"No",i.note,i.owner,i.date]));
+    rows.push(["Module "+m.id+" evidence",m.id,"Evidence / link / owner","","","","",m.evidence])});
+  d.signoff.forEach(s=>rows.push(["Sign-off","",s.role,"",s.signed?"Signed":"Not signed","","",s.required?"Required":"Not required"]));
+  rows.push(["Escalation","","Escalation contact","","","","",d.escalation]);
+  return "﻿"+rows.map(r=>r.map(q).join(",")).join("\r\n");
+}
+const fname=ext=>`risk-checklist-${(S.meta.Project||"untitled").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"untitled"}.${ext}`;
+function download(text,name,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function showExport(){
+  const {complete,miss}=readiness();
+  $("#exp-state").textContent=complete?"✓ Checklist is complete.":"Not complete yet – you can still export; the file will be marked DRAFT and list what's outstanding: "+miss.join("; ")+".";
+  $("#sumtext").textContent=summaryText();$("#summary").showModal();
+}
 $("#close").onclick=()=>$("#summary").close();
-$("#copy").onclick=e=>{navigator.clipboard?.writeText(summaryText());e.target.textContent="Copied"; setTimeout(()=>e.target.textContent="Copy",1500)};
+$("#x-html").onclick=()=>download(reportHTML(),fname("html"),"text/html");
+$("#x-csv").onclick=()=>download(csvText(),fname("csv"),"text/csv");
+$("#x-json").onclick=()=>download(JSON.stringify(model(),null,2),fname("json"),"application/json");
+$("#x-pdf").onclick=()=>{const f=document.createElement("iframe");f.style.cssText="position:fixed;width:0;height:0;border:0";document.body.append(f);
+  f.contentDocument.open();f.contentDocument.write(reportHTML());f.contentDocument.close();
+  f.onload=null;setTimeout(()=>{f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),2000)},200)};
+$("#copy").onclick=e=>{navigator.clipboard?.writeText(summaryText());e.target.textContent="Copied";setTimeout(()=>e.target.textContent="Copy as text",1500)};
 $("#d-clear").onclick=()=>{S=blank();save();init()};
 $("#d-fill").onclick=()=>{
   S=blank();S.meta={Project:"Autopay reminders",Designer:"Yuan Chen",PM:"Sample PM","Eng lead":"Sample Eng",Date:"2026-10-22","Handoff target":"Sprint 42"};

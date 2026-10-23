@@ -9,3 +9,4 @@ Assumptions (not in the source design — adjust freely):
 - T6 ("Can a customer undo?") opens C when ticked, same as the other triage cards.
 - State persists in localStorage. "Demo controls" (bottom right) fills sample data / resets.
 - Palette is Zip tokens via CSS variables at the top of the file.
+- Export (status bar): .html report, print/PDF, .csv, .json and copy-as-text, all built from one data model so they hold identical content. Incomplete checklists export marked DRAFT with an outstanding list.
